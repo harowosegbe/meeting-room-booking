@@ -1,0 +1,165 @@
+# Meeting Room Booking System
+
+A full-stack meeting room booking system built with Express.js, MongoDB, and Next.js.
+
+## Features
+
+- **User Authentication**: Login and registration with JWT tokens
+- **Room Management**: Browse available meeting rooms with details
+- **Booking System**: Book rooms with time constraints (max 4 hours)
+- **Admin Panel**: Manage rooms, users, and bookings
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Tech Stack
+
+- **Backend**: Express.js, MongoDB, JWT Authentication
+- **Frontend**: Next.js, React, Tailwind CSS
+- **Database**: MongoDB with Mongoose ODM
+- **Deployment**: Docker & Docker Compose
+
+## Quick Start
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- Node.js 18+ (for local development)
+
+### Using Docker (Recommended)
+
+1. Clone the repository:
+\`\`\`bash
+git clone <repository-url>
+cd meeting-room-booking
+\`\`\`
+
+2. Start the application:
+\`\`\`bash
+# Production mode
+docker-compose up -d
+
+# Development mode
+docker-compose -f docker-compose.dev.yml up -d
+\`\`\`
+
+3. Access the application:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
+- MongoDB: localhost:27017
+
+### Default Admin Account
+
+- Email: admin@meetingrooms.com
+- Password: admin123
+
+## Local Development
+
+### Backend Setup
+
+\`\`\`bash
+cd backend
+npm install
+npm run dev
+\`\`\`
+
+### Frontend Setup
+
+\`\`\`bash
+cd frontend
+npm install
+npm run dev
+\`\`\`
+
+### Environment Variables
+
+Create `.env` files in both backend and frontend directories:
+
+**Backend (.env):**
+\`\`\`
+NODE_ENV=development
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/meeting-rooms
+JWT_SECRET=your-secret-key
+FRONTEND_URL=http://localhost:3000
+\`\`\`
+
+**Frontend (.env.local):**
+\`\`\`
+NEXT_PUBLIC_API_URL=http://localhost:5000
+\`\`\`
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/me` - Get current user
+
+### Rooms
+- `GET /api/rooms` - Get all rooms
+- `POST /api/rooms` - Create room (admin only)
+- `PUT /api/rooms/:id` - Update room (admin only)
+- `DELETE /api/rooms/:id` - Delete room (admin only)
+
+### Bookings
+- `GET /api/bookings` - Get user bookings (or all for admin)
+- `POST /api/bookings` - Create booking
+- `PUT /api/bookings/:id` - Update booking
+- `DELETE /api/bookings/:id` - Cancel booking
+- `GET /api/bookings/availability/:roomId` - Check room availability
+
+## Docker Commands
+
+\`\`\`bash
+# Build and start services
+docker-compose up --build
+
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# Rebuild specific service
+docker-compose build backend
+docker-compose up -d backend
+\`\`\`
+
+## Testing
+
+Integration tests are included for API endpoints:
+
+\`\`\`bash
+cd backend
+npm test
+\`\`\`
+
+## Project Structure
+
+\`\`\`
+meeting-room-booking/
+├── backend/
+│   ├── models/          # MongoDB models
+│   ├── routes/          # API routes
+│   ├── middleware/      # Authentication middleware
+│   ├── tests/           # Integration tests
+│   └── server.js        # Express server
+├── frontend/
+│   ├── app/             # Next.js app directory
+│   ├── components/      # React components
+│   └── lib/             # Utility functions
+├── docker-compose.yml   # Production Docker setup
+├── docker-compose.dev.yml # Development Docker setup
+└── README.md
+\`\`\`
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License
