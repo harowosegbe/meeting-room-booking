@@ -33,37 +33,38 @@ A full-stack meeting room booking system built with Express.js, MongoDB, and Nex
 
 ### Backend Setup
 
-\`\`\`bash
+```bash
 cd backend
 yarn install
 yarn run dev
-\`\`\`
+```
 
 ### Frontend Setup
 
-\`\`\`bash
+```bash
 cd frontend
 yarn install
 yarn run dev
-\`\`\`
+```
 
 ### Environment Variables
 
 Create `.env` files in both backend and frontend directories:
 
 **Backend (.env):**
-\`\`\`
+
+```bash
 NODE_ENV=development
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/meeting-rooms
 JWT_SECRET=your-secret-key
 FRONTEND_URL=http://localhost:3000
-\`\`\`
+```
 
 **Frontend (.env.local):**
-\`\`\`
+```bash
 NEXT_PUBLIC_API_URL=http://localhost:5000
-\`\`\`
+```
 
 ## API Endpoints
 
@@ -92,14 +93,14 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 Integration tests are included for API endpoints:
 
-\`\`\`bash
+```bash
 cd backend
 npm test
-\`\`\`
+```
 
 ## Project Structure
 
-\`\`\`
+```
 meeting-room-booking/
 ├── backend/
 │ ├── models/ # MongoDB models
@@ -112,7 +113,7 @@ meeting-room-booking/
 │ ├── components/ # React components
 │ └── lib/ # Utility functions
 └── README.md
-\`\`\`
+```
 
 ## Contributing
 
