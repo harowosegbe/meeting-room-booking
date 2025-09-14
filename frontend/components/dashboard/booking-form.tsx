@@ -1,190 +1,274 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { DialogClose } from "@/components/ui/dialog"
+import { useState } from "react";
+import {
+  Button,
+  TextField,
+  Alert,
+  DialogActions,
+  Grid,
+  Box,
+  Typography,
+  Snackbar,
+} from "@mui/material";
+import { createBooking, updateBooking } from "@/api/bookings";
 
 interface Room {
-  _id: string
-  name: string
-  capacity: number
-  location: string
+  _id: string;
+  name: string;
+  capacity: number;
+  location: string;
+}
+
+interface Booking {
+  _id: string;
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  status: "confirmed" | "cancelled";
+  room: {
+    _id: string;
+    name: string;
+    location: string;
+    capacity: number;
+  };
+  attendees: string[];
 }
 
 interface BookingFormProps {
-  room: Room
+  room: Booking["room"];
+  onClose: () => void;
+  initialData?: Booking;
+  onSuccess?: () => void;
 }
 
-export function BookingForm({ room }: BookingFormProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    date: "",
-    startTime: "",
-    endTime: "",
-    attendees: "",
-  })
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
-    try {
-      // Combine date and time for API
-      const startDateTime = new Date(`${formData.date}T${formData.startTime}`)
-      const endDateTime = new Date(`${formData.date}T${formData.endTime}`)
-
-      const attendeesList = formData.attendees
-        .split(",")
-        .map((email) => email.trim())
-        .filter((email) => email.length > 0)
-
-      const token = localStorage.getItem("token")
-      const response = await fetch("http://localhost:5000/api/bookings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          room: room._id,
-          title: formData.title,
-          description: formData.description,
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(),
-          attendees: attendeesList,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess(true)
-        setFormData({
+export function BookingForm({
+  room,
+  onClose,
+  initialData,
+  onSuccess,
+}: BookingFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [formData, setFormData] = useState(
+    initialData
+      ? {
+          title: initialData.title,
+          description: initialData.description,
+          date: initialData.startTime.split("T")[0],
+          startTime: new Date(initialData.startTime)
+            .toISOString()
+            .split("T")[1]
+            .substring(0, 5),
+          endTime: new Date(initialData.endTime)
+            .toISOString()
+            .split("T")[1]
+            .substring(0, 5),
+          attendees: initialData.attendees.join(", "),
+        }
+      : {
           title: "",
           description: "",
           date: "",
           startTime: "",
           endTime: "",
           attendees: "",
-        })
-      } else {
-        setError(data.message || "Booking failed")
+        }
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // Combine date and time for API
+      const startDateTime = new Date(`${formData.date}T${formData.startTime}`);
+      const endDateTime = new Date(`${formData.date}T${formData.endTime}`);
+
+      const attendeesList = formData.attendees
+        .split(",")
+        .map((email) => email.trim())
+        .filter((email) => email.length > 0);
+
+      const opts = {
+        room: room._id,
+        title: formData.title,
+        description: formData.description,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        attendees: attendeesList,
+      };
+
+      const data = initialData
+        ? await updateBooking({
+            bookingId: initialData._id,
+            ...opts,
+          })
+        : await createBooking(opts);
+
+      if (!data.booking) {
+        throw new Error(data.message || "Booking failed");
       }
-    } catch (err) {
-      setError("Network error. Please try again.")
+
+      setSuccess(true);
+      setFormData({
+        title: "",
+        description: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+        attendees: "",
+      });
+      onSuccess?.();
+    } catch (err: any) {
+      setError(err.message || "Network error. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   if (success) {
     return (
-      <div className="text-center py-4">
-        <div className="text-green-600 text-lg font-semibold mb-2">Booking Successful!</div>
-        <p className="text-muted-foreground mb-4">Your meeting room has been booked successfully.</p>
-        <DialogClose asChild>
-          <Button>Close</Button>
-        </DialogClose>
-      </div>
-    )
+      <Box textAlign="center" py={2}>
+        <Typography color="success.main" fontWeight={600} variant="h6" mb={1}>
+          {initialData
+            ? "Booking Updated Successfully!"
+            : "Booking Successful!"}
+        </Typography>
+        <Typography color="text.secondary" mb={2}>
+          Your meeting room has been {initialData ? "updated" : "booked"}{" "}
+          successfully.
+        </Typography>
+        <DialogActions sx={{ justifyContent: "center" }}>
+          <Button onClick={onClose} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Box>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="title">Meeting Title</Label>
-        <Input
-          id="title"
-          placeholder="Enter meeting title"
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="date">Date</Label>
-        <Input
-          id="date"
-          type="date"
-          value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          min={new Date().toISOString().split("T")[0]}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="startTime">Start Time</Label>
-          <Input
-            id="startTime"
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        overflowY: "auto",
+        width: 1,
+      }}
+    >
+      <TextField
+        label="Meeting Title"
+        placeholder="Enter meeting title"
+        value={formData.title}
+        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+        required
+        fullWidth
+      />
+      <TextField
+        label="Date"
+        type="date"
+        value={formData.date}
+        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+        required
+        fullWidth
+        slotProps={{
+          htmlInput: {
+            min: new Date().toISOString().split("T")[0],
+          },
+          inputLabel: {
+            shrink: true,
+          },
+        }}
+      />
+      <Grid container spacing={2}>
+        <Grid
+          size={{
+            xs: 6,
+          }}
+        >
+          <TextField
+            label="Start Time"
             type="time"
             value={formData.startTime}
-            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, startTime: e.target.value })
+            }
             required
+            fullWidth
+            slotProps={{
+              inputLabel: {
+                shrink: true,
+              },
+            }}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="endTime">End Time</Label>
-          <Input
-            id="endTime"
+        </Grid>
+        <Grid
+          size={{
+            xs: 6,
+          }}
+        >
+          <TextField
+            label="End Time"
             type="time"
             value={formData.endTime}
-            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, endTime: e.target.value })
+            }
             required
+            fullWidth
+            slotProps={{
+              inputLabel: {
+                shrink: true,
+              },
+            }}
           />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description (Optional)</Label>
-        <Textarea
-          id="description"
-          placeholder="Meeting agenda or notes"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          rows={3}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="attendees">Attendees (Optional)</Label>
-        <Input
-          id="attendees"
-          placeholder="Enter email addresses separated by commas"
-          value={formData.attendees}
-          onChange={(e) => setFormData({ ...formData, attendees: e.target.value })}
-        />
-      </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="flex gap-2">
-        <DialogClose asChild>
-          <Button type="button" variant="outline" className="flex-1 bg-transparent">
-            Cancel
-          </Button>
-        </DialogClose>
-        <Button type="submit" className="flex-1" disabled={isLoading}>
-          {isLoading ? "Booking..." : "Book Room"}
+        </Grid>
+      </Grid>
+      <TextField
+        label="Description (Optional)"
+        placeholder="Meeting agenda or notes"
+        value={formData.description}
+        onChange={(e) =>
+          setFormData({ ...formData, description: e.target.value })
+        }
+        multiline
+        rows={3}
+        fullWidth
+      />
+      <TextField
+        label="Attendees (Optional)"
+        placeholder="Enter email addresses separated by commas"
+        value={formData.attendees}
+        onChange={(e) =>
+          setFormData({ ...formData, attendees: e.target.value })
+        }
+        fullWidth
+      />
+      {error && <Alert severity="error">{error}</Alert>}
+      <DialogActions>
+        <Button
+          type="button"
+          color="secondary"
+          variant="outlined"
+          onClick={onClose}
+        >
+          Cancel
         </Button>
-      </div>
-    </form>
-  )
+        <Button type="submit" variant="contained" loading={isLoading}>
+          {initialData ? "Update Booking" : "Book Room"}
+        </Button>
+      </DialogActions>
+    </Box>
+  );
 }
+
+export type { Booking };

@@ -8,7 +8,7 @@ const router = express.Router();
 // Get all rooms (available to all authenticated users)
 router.get("/", async (req, res) => {
   try {
-    const { active = "true" } = req.query;
+    const { active } = req.query;
     const filter = active === "true" ? { isActive: true } : {};
 
     const rooms = await Room.find(filter).sort({ name: 1 });
@@ -62,7 +62,7 @@ router.post(
     body("description").optional().trim(),
     body("amenities").optional().isArray(),
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -114,7 +114,7 @@ router.put(
     body("amenities").optional().isArray(),
     body("isActive").optional().isBoolean(),
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -163,7 +163,7 @@ router.delete(
   "/:id",
   requireAdmin,
   [param("id").isMongoId().withMessage("Invalid room ID")],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {

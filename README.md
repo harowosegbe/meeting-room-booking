@@ -13,7 +13,7 @@ A full-stack meeting room booking system built with Express.js, MongoDB, and Nex
 ## Tech Stack
 
 - **Backend**: Express.js, MongoDB, JWT Authentication
-- **Frontend**: Next.js, React, Tailwind CSS
+- **Frontend**: Next.js, React, Material UI
 - **Database**: MongoDB with Mongoose ODM
 - **Deployment**: Docker & Docker Compose
 
@@ -23,28 +23,6 @@ A full-stack meeting room booking system built with Express.js, MongoDB, and Nex
 
 - Docker and Docker Compose installed
 - Node.js 18+ (for local development)
-
-### Using Docker (Recommended)
-
-1. Clone the repository:
-\`\`\`bash
-git clone <repository-url>
-cd meeting-room-booking
-\`\`\`
-
-2. Start the application:
-\`\`\`bash
-# Production mode
-docker-compose up -d
-
-# Development mode
-docker-compose -f docker-compose.dev.yml up -d
-\`\`\`
-
-3. Access the application:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-- MongoDB: localhost:27017
 
 ### Default Admin Account
 
@@ -57,16 +35,16 @@ docker-compose -f docker-compose.dev.yml up -d
 
 \`\`\`bash
 cd backend
-npm install
-npm run dev
+yarn install
+yarn run dev
 \`\`\`
 
 ### Frontend Setup
 
 \`\`\`bash
 cd frontend
-npm install
-npm run dev
+yarn install
+yarn run dev
 \`\`\`
 
 ### Environment Variables
@@ -90,39 +68,25 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/me` - Get current user
+
+- `POST /api/users/register` - Register new user
+- `POST /api/users/login` - Login user
+- `GET /api/users/me` - Get current user
 
 ### Rooms
+
 - `GET /api/rooms` - Get all rooms
 - `POST /api/rooms` - Create room (admin only)
 - `PUT /api/rooms/:id` - Update room (admin only)
 - `DELETE /api/rooms/:id` - Delete room (admin only)
 
 ### Bookings
+
 - `GET /api/bookings` - Get user bookings (or all for admin)
 - `POST /api/bookings` - Create booking
 - `PUT /api/bookings/:id` - Update booking
 - `DELETE /api/bookings/:id` - Cancel booking
 - `GET /api/bookings/availability/:roomId` - Check room availability
-
-## Docker Commands
-
-\`\`\`bash
-# Build and start services
-docker-compose up --build
-
-# Stop services
-docker-compose down
-
-# View logs
-docker-compose logs -f
-
-# Rebuild specific service
-docker-compose build backend
-docker-compose up -d backend
-\`\`\`
 
 ## Testing
 
@@ -138,17 +102,15 @@ npm test
 \`\`\`
 meeting-room-booking/
 ├── backend/
-│   ├── models/          # MongoDB models
-│   ├── routes/          # API routes
-│   ├── middleware/      # Authentication middleware
-│   ├── tests/           # Integration tests
-│   └── server.js        # Express server
+│ ├── models/ # MongoDB models
+│ ├── routes/ # API routes
+│ ├── middleware/ # Authentication middleware
+│ ├── tests/ # Integration tests
+│ └── server.ts # Express server
 ├── frontend/
-│   ├── app/             # Next.js app directory
-│   ├── components/      # React components
-│   └── lib/             # Utility functions
-├── docker-compose.yml   # Production Docker setup
-├── docker-compose.dev.yml # Development Docker setup
+│ ├── app/ # Next.js app directory
+│ ├── components/ # React components
+│ └── lib/ # Utility functions
 └── README.md
 \`\`\`
 

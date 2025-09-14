@@ -1,506 +1,638 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState, useEffect } from "react";
 import {
+  Box,
+  Tabs,
+  Tab,
+  Typography,
+  Button,
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Edit, Trash2, Users, Calendar, Building } from "lucide-react"
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  TextField,
+  InputLabel,
+  FormControl,
+  Select,
+  MenuItem,
+  Snackbar,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton,
+  Stack,
+  Grid,
+  Skeleton,
+} from "@mui/material";
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  People as PeopleIcon,
+  CalendarMonth as CalendarIcon,
+  Apartment as BuildingIcon,
+} from "@mui/icons-material";
+import { createRoom, getRooms, updateRoom } from "@/api/rooms";
+import { toast } from "react-toastify";
+import { cancelBooking, getBookings } from "@/api/bookings";
+import { MoreOptions } from "../ui/more-options";
 
 interface Room {
-  _id: string
-  name: string
-  capacity: number
-  location: string
-  description?: string
-  amenities: string[]
-  isActive: boolean
-  createdAt: string
+  _id: string;
+  name: string;
+  capacity: number;
+  location: string;
+  description?: string;
+  amenities: string[];
+  isActive: boolean;
+  createdAt: string;
 }
 
 interface User {
-  _id: string
-  email: string
-  firstName: string
-  lastName: string
-  role: "user" | "admin"
-  isActive: boolean
-  createdAt: string
+  _id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "user" | "admin";
+  isActive: boolean;
+  createdAt: string;
 }
 
 interface Booking {
-  _id: string
-  title: string
-  startTime: string
-  endTime: string
-  status: "confirmed" | "cancelled"
+  _id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  status: "confirmed" | "cancelled";
   room: {
-    name: string
-    location: string
-  }
+    name: string;
+    location: string;
+  };
   user: {
-    firstName: string
-    lastName: string
-    email: string
-  }
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+function LoadingIndicator() {
+  return (
+    <Box sx={{ width: "100%", p: 3 }}>
+      <Stack spacing={2}>
+        <Typography variant="h6">
+          <Skeleton width={180} />
+        </Typography>
+        <Skeleton variant="rectangular" height={40} width="100%" />
+        <Skeleton variant="rectangular" height={200} width="100%" />
+      </Stack>
+    </Box>
+  );
 }
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("rooms")
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
+  const [activeTab, setActiveTab] = useState(0);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [openRoomDialog, setOpenRoomDialog] = useState(false);
 
   useEffect(() => {
-    if (activeTab === "rooms") {
-      fetchRooms()
-    } else if (activeTab === "users") {
-      fetchUsers()
-    } else if (activeTab === "bookings") {
-      fetchAllBookings()
+    if (activeTab === 0) {
+      fetchRooms();
+    } else if (activeTab === 1) {
+      fetchAllBookings();
     }
-  }, [activeTab])
+  }, [activeTab]);
 
   const fetchRooms = async () => {
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch("http://localhost:5000/api/rooms?active=false", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setRooms(data.rooms)
-      }
-    } catch (error) {
-      setError("Failed to fetch rooms")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      setIsLoading(true);
+      const data = await getRooms({
+        active: "false",
+      });
 
-  const fetchUsers = async () => {
-    // Note: This would need a users endpoint in the backend
-    setUsers([])
-    setIsLoading(false)
-  }
+      if (!data || !data.rooms) {
+        throw new Error("No rooms data received");
+      }
+
+      if (data.rooms) {
+        setRooms(data.rooms);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch rooms");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchAllBookings = async () => {
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch("http://localhost:5000/api/bookings", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setBookings(data.bookings)
+      setIsLoading(true);
+      const data = await getBookings({
+        all: true,
+      });
+
+      if (!data || !data.bookings) {
+        throw new Error("No bookings data received");
       }
-    } catch (error) {
-      setError("Failed to fetch bookings")
+
+      setBookings(data.bookings);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch bookings");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="rooms" className="flex items-center gap-2">
-            <Building className="h-4 w-4" />
-            Rooms
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="bookings" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            All Bookings
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="rooms" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Room Management</h3>
-            <AddRoomDialog onRoomAdded={fetchRooms} />
-          </div>
-          <RoomManagement rooms={rooms} onRoomUpdated={fetchRooms} />
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">User Management</h3>
-          </div>
-          <UserManagement users={users} />
-        </TabsContent>
-
-        <TabsContent value="bookings" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">All Bookings</h3>
-          </div>
-          <BookingManagement bookings={bookings} onBookingUpdated={fetchAllBookings} />
-        </TabsContent>
+    <Box sx={{ width: "100%" }}>
+      <Tabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        aria-label="admin panel tabs"
+      >
+        <Tab
+          icon={<BuildingIcon fontSize="small" />}
+          label="Rooms"
+          iconPosition="start"
+        />
+        <Tab
+          icon={<CalendarIcon fontSize="small" />}
+          label="All Bookings"
+          iconPosition="start"
+        />
       </Tabs>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      {isLoading && <LoadingIndicator />}
+      {!isLoading && (
+        <Box sx={{ mt: 2 }}>
+          {activeTab === 0 && (
+            <Box>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+              >
+                <Typography variant="h6">Room Management</Typography>
+
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setOpenRoomDialog(true)}
+                >
+                  Add Room
+                </Button>
+
+                <RoomDialog
+                  onRoomAdded={fetchRooms}
+                  open={openRoomDialog}
+                  onClose={() => setOpenRoomDialog(false)}
+                />
+              </Stack>
+              <RoomManagement rooms={rooms} onRoomUpdated={fetchRooms} />
+            </Box>
+          )}
+          {activeTab === 1 && (
+            <Box>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+              >
+                <Typography variant="h6">All Bookings</Typography>
+              </Stack>
+              <BookingManagement
+                bookings={bookings}
+                onBookingUpdated={fetchAllBookings}
+              />
+            </Box>
+          )}
+        </Box>
       )}
-    </div>
-  )
+    </Box>
+  );
 }
 
-function AddRoomDialog({ onRoomAdded }: { onRoomAdded: () => void }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [formData, setFormData] = useState({
-    name: "",
-    capacity: "",
-    location: "",
-    description: "",
-    amenities: "",
-  })
+function RoomDialog({
+  onRoomAdded,
+  initialData,
+  open,
+  onClose,
+}: {
+  onRoomAdded: () => void;
+  initialData?: Room;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [formData, setFormData] = useState(
+    initialData
+      ? {
+          ...initialData,
+          capacity: initialData.capacity.toString(),
+          amenities: initialData.amenities.join(", "),
+        }
+      : {
+          name: "",
+          capacity: "",
+          location: "",
+          description: "",
+          amenities: "",
+        }
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch("http://localhost:5000/api/rooms", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...formData,
-          capacity: Number.parseInt(formData.capacity),
-          amenities: formData.amenities
-            .split(",")
-            .map((a) => a.trim())
-            .filter((a) => a),
-        }),
-      })
+      const opts = {
+        ...formData,
+        capacity: Number.parseInt(formData.capacity),
+        amenities: formData.amenities
+          .split(",")
+          .map((a) => a.trim())
+          .filter((a) => a),
+      };
 
-      if (response.ok) {
-        setIsOpen(false)
-        setFormData({ name: "", capacity: "", location: "", description: "", amenities: "" })
-        onRoomAdded()
-      } else {
-        const data = await response.json()
-        setError(data.message || "Failed to create room")
+      const data = initialData
+        ? await updateRoom({
+            ...opts,
+            roomId: initialData._id,
+          })
+        : await createRoom(opts);
+
+      if (!data.room) {
+        throw new Error("No room data received");
       }
-    } catch (error) {
-      setError("Network error. Please try again.")
+
+      onClose();
+      setFormData({
+        name: "",
+        capacity: "",
+        location: "",
+        description: "",
+        amenities: "",
+      });
+      onRoomAdded();
+      toast.success(
+        initialData ? "Room updated successfully" : "Room created successfully"
+      );
+    } catch (error: any) {
+      setError("Network error. Please try again.");
+      toast.error(error.message || "Failed to create/update room.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Room
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Room</DialogTitle>
-          <DialogDescription>Create a new meeting room for booking</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Room Name</Label>
-            <Input
-              id="name"
+    <>
+      <Dialog open={open} onClose={onClose}>
+        <DialogTitle>Add New Room</DialogTitle>
+        <DialogContent>
+          <DialogContentText mb={2}>
+            Create a new meeting room for booking
+          </DialogContentText>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
+          >
+            <TextField
+              label="Room Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               required
+              fullWidth
             />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="capacity">Capacity</Label>
-              <Input
-                id="capacity"
-                type="number"
-                min="1"
-                max="100"
-                value={formData.capacity}
-                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
+            <Grid container spacing={2}>
+              <Grid size={6}>
+                <TextField
+                  label="Capacity"
+                  type="number"
+                  value={formData.capacity}
+                  onChange={(e) =>
+                    setFormData({ ...formData, capacity: e.target.value })
+                  }
+                  slotProps={{
+                    htmlInput: { min: 1, max: 100 },
+                  }}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid size={6}>
+                <TextField
+                  label="Location"
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                  required
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+            <TextField
+              label="Description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              multiline
               rows={3}
+              fullWidth
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="amenities">Amenities (comma-separated)</Label>
-            <Input
-              id="amenities"
+            <TextField
+              label="Amenities (comma-separated)"
               placeholder="WiFi, Projector, Whiteboard"
               value={formData.amenities}
-              onChange={(e) => setFormData({ ...formData, amenities: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, amenities: e.target.value })
+              }
+              fullWidth
             />
-          </div>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="flex-1">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "Creating..." : "Create Room"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
+            {error && <Alert severity="error">{error}</Alert>}
+            <DialogActions>
+              <Button onClick={onClose} color="secondary" variant="outlined">
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained" loading={isLoading}>
+                {initialData ? "Update Room" : "Create Room"}
+              </Button>
+            </DialogActions>
+          </Box>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
-function RoomManagement({ rooms, onRoomUpdated }: { rooms: Room[]; onRoomUpdated: () => void }) {
+function RoomManagement({
+  rooms,
+  onRoomUpdated,
+}: {
+  rooms: Room[];
+  onRoomUpdated: () => void;
+}) {
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
+
   const toggleRoomStatus = async (roomId: string, isActive: boolean) => {
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:5000/api/rooms/${roomId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ isActive: !isActive }),
-      })
+      setUpdating(roomId);
 
-      if (response.ok) {
-        onRoomUpdated()
+      const newState = !isActive;
+      const data = await updateRoom({
+        roomId,
+        isActive: newState,
+      });
+
+      if (!data.room) {
+        throw new Error("No room data received");
       }
-    } catch (error) {
-      console.error("Error updating room:", error)
+
+      onRoomUpdated();
+      toast.success(
+        newState
+          ? "Room activated successfully"
+          : "Room deactivated successfully"
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update room status");
+    } finally {
+      setUpdating(null);
     }
-  }
+  };
 
   return (
-    <div className="border rounded-lg">
+    <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
       <Table>
-        <TableHeader>
+        <TableHead>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Capacity</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Amenities</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableCell>
+              <b>Name</b>
+            </TableCell>
+            <TableCell>
+              <b>Location</b>
+            </TableCell>
+            <TableCell>
+              <b>Capacity</b>
+            </TableCell>
+            <TableCell>
+              <b>Status</b>
+            </TableCell>
+            <TableCell>
+              <b>Amenities</b>
+            </TableCell>
+            <TableCell>
+              <b>Actions</b>
+            </TableCell>
           </TableRow>
-        </TableHeader>
+        </TableHead>
         <TableBody>
           {rooms.map((room) => (
             <TableRow key={room._id}>
-              <TableCell className="font-medium">{room.name}</TableCell>
+              <TableCell>{room.name}</TableCell>
               <TableCell>{room.location}</TableCell>
               <TableCell>{room.capacity}</TableCell>
               <TableCell>
-                <Badge variant={room.isActive ? "default" : "secondary"}>{room.isActive ? "Active" : "Inactive"}</Badge>
+                <Chip
+                  label={room.isActive ? "Active" : "Inactive"}
+                  color={room.isActive ? "success" : "default"}
+                  size="small"
+                />
               </TableCell>
               <TableCell>
-                <div className="flex flex-wrap gap-1">
+                <Stack direction="row" spacing={1} flexWrap="wrap">
                   {room.amenities.slice(0, 2).map((amenity, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {amenity}
-                    </Badge>
+                    <Chip
+                      key={index}
+                      label={amenity}
+                      size="small"
+                      variant="outlined"
+                    />
                   ))}
                   {room.amenities.length > 2 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{room.amenities.length - 2}
-                    </Badge>
+                    <Chip
+                      label={`+${room.amenities.length - 2}`}
+                      size="small"
+                      variant="outlined"
+                    />
                   )}
-                </div>
+                </Stack>
               </TableCell>
               <TableCell>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => toggleRoomStatus(room._id, room.isActive)}>
-                    {room.isActive ? "Deactivate" : "Activate"}
-                  </Button>
-                </div>
+                <MoreOptions
+                  config={[
+                    {
+                      label: "Edit",
+                      onClick: () => setSelectedRoom(room),
+                      disabled: updating === room._id,
+                    },
+                    {
+                      label: room.isActive ? "Deactivate" : "Activate",
+                      onClick: () => toggleRoomStatus(room._id, room.isActive),
+                      disabled: updating === room._id,
+                    },
+                  ]}
+                />
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </div>
-  )
+
+      {selectedRoom && (
+        <RoomDialog
+          onRoomAdded={onRoomUpdated}
+          open={Boolean(selectedRoom)}
+          onClose={() => setSelectedRoom(null)}
+          initialData={selectedRoom || undefined}
+        />
+      )}
+    </TableContainer>
+  );
 }
 
-function UserManagement({ users }: { users: User[] }) {
-  return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Joined</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                User management endpoint not implemented yet
-              </TableCell>
-            </TableRow>
-          ) : (
-            users.map((user) => (
-              <TableRow key={user._id}>
-                <TableCell className="font-medium">
-                  {user.firstName} {user.lastName}
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={user.isActive ? "default" : "secondary"}>
-                    {user.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </TableCell>
-                <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
+function BookingManagement({
+  bookings,
+  onBookingUpdated,
+}: {
+  bookings: Booking[];
+  onBookingUpdated: () => void;
+}) {
+  const [updating, setUpdating] = useState<string | null>(null);
 
-function BookingManagement({ bookings, onBookingUpdated }: { bookings: Booking[]; onBookingUpdated: () => void }) {
-  const cancelBooking = async (bookingId: string) => {
+  const handleCancelBooking = async (bookingId: string) => {
     try {
-      const token = localStorage.getItem("token")
-      const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      setUpdating(bookingId);
+      const data = await cancelBooking(bookingId);
 
-      if (response.ok) {
-        onBookingUpdated()
-      }
-    } catch (error) {
-      console.error("Error cancelling booking:", error)
+      toast.success("Booking cancelled successfully");
+      onBookingUpdated();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to cancel booking");
+    } finally {
+      setUpdating(null);
     }
-  }
+  };
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return {
       date: date.toLocaleDateString(),
       time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    }
-  }
+    };
+  };
 
   return (
-    <div className="border rounded-lg">
+    <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
       <Table>
-        <TableHeader>
+        <TableHead>
           <TableRow>
-            <TableHead>Meeting</TableHead>
-            <TableHead>Room</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead>Date & Time</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableCell>
+              <b>Meeting</b>
+            </TableCell>
+            <TableCell>
+              <b>Room</b>
+            </TableCell>
+            <TableCell>
+              <b>User</b>
+            </TableCell>
+            <TableCell>
+              <b>Date & Time</b>
+            </TableCell>
+            <TableCell>
+              <b>Status</b>
+            </TableCell>
+            <TableCell>
+              <b>Actions</b>
+            </TableCell>
           </TableRow>
-        </TableHeader>
+        </TableHead>
         <TableBody>
           {bookings.map((booking) => {
-            const startDateTime = formatDateTime(booking.startTime)
-            const endDateTime = formatDateTime(booking.endTime)
-
+            const startDateTime = formatDateTime(booking.startTime);
+            const endDateTime = formatDateTime(booking.endTime);
             return (
               <TableRow key={booking._id}>
-                <TableCell className="font-medium">{booking.title}</TableCell>
+                <TableCell>{booking.title}</TableCell>
                 <TableCell>
                   {booking.room.name}
-                  <div className="text-xs text-muted-foreground">{booking.room.location}</div>
+                  <Typography
+                    variant="caption"
+                    display="block"
+                    color="text.secondary"
+                  >
+                    {booking.room.location}
+                  </Typography>
                 </TableCell>
                 <TableCell>
                   {booking.user.firstName} {booking.user.lastName}
-                  <div className="text-xs text-muted-foreground">{booking.user.email}</div>
+                  <Typography
+                    variant="caption"
+                    display="block"
+                    color="text.secondary"
+                  >
+                    {booking.user.email}
+                  </Typography>
                 </TableCell>
                 <TableCell>
                   {startDateTime.date}
-                  <div className="text-xs text-muted-foreground">
+                  <Typography
+                    variant="caption"
+                    display="block"
+                    color="text.secondary"
+                  >
                     {startDateTime.time} - {endDateTime.time}
-                  </div>
+                  </Typography>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>{booking.status}</Badge>
+                  <Chip
+                    label={booking.status}
+                    color={
+                      booking.status === "confirmed" ? "success" : "default"
+                    }
+                    size="small"
+                  />
                 </TableCell>
                 <TableCell>
                   {booking.status === "confirmed" && (
-                    <Button variant="outline" size="sm" onClick={() => cancelBooking(booking._id)}>
-                      <Trash2 className="h-3 w-3 mr-1" />
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<DeleteIcon fontSize="small" />}
+                      onClick={() => handleCancelBooking(booking._id)}
+                      loading={updating === booking._id}
+                    >
                       Cancel
                     </Button>
                   )}
                 </TableCell>
               </TableRow>
-            )
+            );
           })}
         </TableBody>
       </Table>
-    </div>
-  )
+    </TableContainer>
+  );
 }

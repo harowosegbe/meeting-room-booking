@@ -48,7 +48,8 @@ const bookingSchema = new mongoose.Schema(
 
 // Validate booking duration (max 4 hours)
 bookingSchema.pre("save", function (next) {
-  const duration = (this.endTime - this.startTime) / (1000 * 60 * 60); // hours
+  const duration =
+    (this.endTime.getTime() - this.startTime.getTime()) / (1000 * 60 * 60); // hours
   if (duration > 4) {
     return next(new Error("Booking duration cannot exceed 4 hours"));
   }
@@ -65,4 +66,3 @@ bookingSchema.index({ startTime: 1, endTime: 1 });
 
 const BookingModel = mongoose.model("Booking", bookingSchema);
 export default BookingModel;
-

@@ -1,9 +1,18 @@
 module.exports = {
+  preset: "ts-jest",
   testEnvironment: "node",
   setupFilesAfterEnv: ["<rootDir>/tests/setup.js"],
-  collectCoverageFrom: ["routes/**/*.js", "models/**/*.js", "middleware/**/*.js", "!tests/**/*.js", "!node_modules/**"],
+  moduleFileExtensions: ["ts", "js", "json"],
+  collectCoverageFrom: [
+    "routes/**/*.js",
+    "models/**/*.js",
+    "middleware/**/*.js",
+    "!tests/**/*.ts",
+    "!tests/**/*.js",
+    "!node_modules/**",
+  ],
   coverageReporters: ["text", "lcov", "html"],
-  testMatch: ["**/tests/**/*.test.js"],
+  testMatch: ["**/tests/**/*.test.ts"],
   verbose: true,
   // Add Jest globals
   globals: {
@@ -16,4 +25,4 @@ module.exports = {
     expect: "readonly",
     test: "readonly",
   },
-}
+};

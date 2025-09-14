@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Generate JWT token
 const generateToken = (userId: string) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || "your-secret-key", {
+  return jwt.sign({ userId }, process.env.JWT_SECRET || "secret-key", {
     expiresIn: "24h",
   });
 };
@@ -22,7 +22,7 @@ router.post(
     body("firstName").trim().isLength({ min: 1 }),
     body("lastName").trim().isLength({ min: 1 }),
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -34,9 +34,9 @@ router.post(
       // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: "User already exists with this email" });
+        return res.status(400).json({
+          message: "User already exists with this email, please login",
+        });
       }
 
       // Create new user
@@ -49,7 +49,7 @@ router.post(
 
       await user.save();
 
-      const token = generateToken(user._id);
+      const token = generateToken(user._id.toString());
 
       res.status(201).json({
         message: "User registered successfully",
@@ -67,7 +67,7 @@ router.post(
 router.post(
   "/login",
   [body("email").isEmail().normalizeEmail(), body("password").exists()],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -79,16 +79,21 @@ router.post(
       // Find user
       const user = await User.findOne({ email, isActive: true });
       if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res
+          .status(401)
+          .json({ message: "email or password is incorrect" });
       }
 
       // Check password
+      //@ts-ignore
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res
+          .status(401)
+          .json({ message: "email or password is incorrect" });
       }
 
-      const token = generateToken(user._id);
+      const token = generateToken(user._id.toString());
 
       res.json({
         message: "Login successful",
@@ -103,14 +108,24 @@ router.post(
 );
 
 // Get current user
-router.get("/me", authenticateToken, (req, res) => {
-  res.json({ user: req.user });
-});
+
+
+router.get(
+  "/me",
+  authenticateToken,
+  (req: express.Request, res: express.Response) => {
+    res.json({ user: req.user });
+  }
+);
 
 // Refresh token
-router.post("/refresh", authenticateToken, (req, res) => {
-  const token = generateToken(req.user._id);
-  res.json({ token });
-});
+router.post(
+  "/refresh",
+  authenticateToken,
+  (req: express.Request, res: express.Response) => {
+    const token = generateToken(req.user._id.toString());
+    res.json({ token });
+  }
+);
 
 export default router;

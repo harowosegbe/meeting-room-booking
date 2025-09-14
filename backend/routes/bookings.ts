@@ -3,16 +3,16 @@ import { body, validationResult, param, query } from "express-validator";
 import mongoose from "mongoose";
 import Booking from "../models/Booking";
 import Room from "../models/Room";
-import { requireAdmin } from "../middleware/auth";
+import { authenticateToken, requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
 // Helper function to check for booking conflicts
 const checkBookingConflict = async (
-  roomId,
-  startTime,
-  endTime,
-  excludeBookingId = null
+  roomId: mongoose.Types.ObjectId,
+  startTime: Date,
+  endTime: Date,
+  excludeBookingId: mongoose.Types.ObjectId | null = null
 ) => {
   const conflictQuery = {
     room: roomId,
@@ -26,7 +26,7 @@ const checkBookingConflict = async (
   };
 
   if (excludeBookingId) {
-    conflictQuery._id = { $ne: excludeBookingId };
+    conflictQuery["_id"] = { $ne: excludeBookingId };
   }
 
   const conflictingBooking = await Booking.findOne(conflictQuery);
@@ -36,43 +36,45 @@ const checkBookingConflict = async (
 // Get bookings (user sees own bookings, admin sees all)
 router.get(
   "/",
+  authenticateToken,
   [
     query("room").optional().isMongoId(),
     query("date").optional().isISO8601(),
     query("status").optional().isIn(["confirmed", "cancelled"]),
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { room, date, status } = req.query;
+      const { room, date, status, all } = req.query;
       const filter = {};
 
       // Regular users can only see their own bookings
-      if (req.user.role !== "admin") {
-        filter.user = req.user._id;
+      if (req.user.role !== "admin" || all !== "true") {
+        filter["user"] = req.user._id;
       }
 
       // Add optional filters
-      if (room) filter.room = room;
-      if (status) filter.status = status;
+      if (room) filter["room"] = room;
+      if (status) filter["status"] = status;
 
       if (date) {
-        const startOfDay = new Date(date);
+        const startOfDay = new Date(date.toString());
         startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(date);
+        const endOfDay = new Date(date.toString());
         endOfDay.setHours(23, 59, 59, 999);
 
-        filter.startTime = { $gte: startOfDay, $lte: endOfDay };
+        filter["startTime"] = { $gte: startOfDay, $lte: endOfDay };
       }
 
       const bookings = await Booking.find(filter)
         .populate("room", "name location capacity")
         .populate("user", "firstName lastName email")
-        .sort({ startTime: 1 });
+        // .sort({ startTime: 1 });
+        .sort({ createdAt: -1 });
 
       res.json({ bookings });
     } catch (error) {
@@ -85,6 +87,7 @@ router.get(
 // Get single booking
 router.get(
   "/:id",
+  authenticateToken,
   [param("id").isMongoId().withMessage("Invalid booking ID")],
   async (req, res) => {
     try {
@@ -97,7 +100,7 @@ router.get(
 
       // Regular users can only see their own bookings
       if (req.user.role !== "admin") {
-        filter.user = req.user._id;
+        filter["user"] = req.user._id;
       }
 
       const booking = await Booking.findOne(filter)
@@ -119,6 +122,7 @@ router.get(
 // Create new booking
 router.post(
   "/",
+  authenticateToken,
   [
     body("room").isMongoId().withMessage("Valid room ID is required"),
     body("title")
@@ -130,7 +134,7 @@ router.post(
     body("description").optional().trim(),
     body("attendees").optional().isArray(),
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -163,7 +167,7 @@ router.post(
           .json({ message: "End time must be after start time" });
       }
 
-      const duration = (end - start) / (1000 * 60 * 60); // hours
+      const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60); // hours
       if (duration > 4) {
         return res
           .status(400)
@@ -218,6 +222,7 @@ router.post(
 // Update booking (user can update own, admin can update any)
 router.put(
   "/:id",
+  authenticateToken,
   [
     param("id").isMongoId().withMessage("Invalid booking ID"),
     body("title").optional().trim().isLength({ min: 1 }),
@@ -237,7 +242,7 @@ router.put(
 
       // Regular users can only update their own bookings
       if (req.user.role !== "admin") {
-        filter.user = req.user._id;
+        filter["user"] = req.user._id;
       }
 
       const booking = await Booking.findOne(filter);
@@ -270,7 +275,8 @@ router.put(
             .json({ message: "End time must be after start time" });
         }
 
-        const duration = (newEndTime - newStartTime) / (1000 * 60 * 60);
+        const duration =
+          (newEndTime.getTime() - newStartTime.getTime()) / (1000 * 60 * 60);
         if (duration > 4) {
           return res
             .status(400)
@@ -320,8 +326,9 @@ router.put(
 // Cancel booking (user can cancel own, admin can cancel any)
 router.delete(
   "/:id",
+  authenticateToken,
   [param("id").isMongoId().withMessage("Invalid booking ID")],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -332,7 +339,7 @@ router.delete(
 
       // Regular users can only cancel their own bookings
       if (req.user.role !== "admin") {
-        filter.user = req.user._id;
+        filter["user"] = req.user._id;
       }
 
       const booking = await Booking.findOne(filter);
@@ -358,11 +365,12 @@ router.delete(
 // Get room availability for a specific date
 router.get(
   "/availability/:roomId",
+  authenticateToken,
   [
     param("roomId").isMongoId().withMessage("Invalid room ID"),
     query("date").isISO8601().withMessage("Valid date is required"),
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -378,9 +386,9 @@ router.get(
         return res.status(404).json({ message: "Room not found" });
       }
 
-      const startOfDay = new Date(date);
+      const startOfDay = new Date((date as string).toString());
       startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
+      const endOfDay = new Date((date as string).toString());
       endOfDay.setHours(23, 59, 59, 999);
 
       const bookings = await Booking.find({

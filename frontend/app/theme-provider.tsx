@@ -1,16 +1,20 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { createTheme, ThemeProvider as MuiThemeProvider, CssBaseline } from "@mui/material"
-import { cyan, grey, red } from "@mui/material/colors"
+import {
+  createTheme,
+  ThemeProvider as MuiThemeProvider,
+  CssBaseline,
+} from "@mui/material";
+import { cyan, grey, red } from "@mui/material/colors";
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: cyan[600],
-      light: cyan[400],
-      dark: cyan[800],
+      main: grey[900],
+      light: grey[400],
+      dark: grey[800],
     },
     secondary: {
       main: grey[600],
@@ -52,8 +56,26 @@ const theme = createTheme({
         },
       },
     },
+    MuiInputBase: {
+      styleOverrides: {
+        input: {
+          "&::placeholder": {
+            fontSize: 12,
+            opacity: 1,
+          },
+          fontSize: 12,
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          fontSize: 12, // smaller label
+        },
+      },
+    },
   },
-})
+});
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -61,5 +83,5 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       <CssBaseline />
       {children}
     </MuiThemeProvider>
-  )
+  );
 }
